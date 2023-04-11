@@ -87,7 +87,12 @@ class Mention {
 
     this.mentionList = document.createElement("ul");
     this.mentionList.id = 'quill-mention-list';
+    this.mentionList.setAttribute('role', 'listbox');
     quill.root.setAttribute('aria-owns', 'quill-mention-list');
+    quill.root.setAttribute('aria-controls', 'quill-mention-list');
+    quill.root.setAttribute('aria-haspopup', 'true');
+    quill.root.setAttribute('role', 'combobox');
+    quill.root.setAttribute('aria-expanded', 'false');
     this.mentionList.className = this.options.mentionListClass
       ? this.options.mentionListClass
       : "";
@@ -191,6 +196,7 @@ class Mention {
       this.quill.container.appendChild(this.mentionContainer);
     }
 
+    this.quill.root.setAttribute('aria-expanded', 'true');
     this.mentionContainer.style.visibility = "hidden";
     this.mentionContainer.style.display = "";
     this.mentionContainer.scrollTop = 0;
@@ -200,6 +206,7 @@ class Mention {
 
   hideMentionList() {
     this.options.onBeforeClose();
+    this.quill.root.setAttribute('aria-expanded', 'false');
     this.mentionContainer.style.display = "none";
     this.mentionContainer.remove();
     this.setIsOpen(false);
@@ -209,6 +216,7 @@ class Mention {
   highlightItem(scrollItemInView = true) {
     for (let i = 0; i < this.mentionList.childNodes.length; i += 1) {
       this.mentionList.childNodes[i].classList.remove("selected");
+      this.mentionList.childNodes[i].removeAttribute('aria-selected');
     }
 
     if (this.itemIndex === -1 || this.mentionList.childNodes[this.itemIndex].dataset.disabled === "true") {
@@ -216,6 +224,7 @@ class Mention {
     }
 
     this.mentionList.childNodes[this.itemIndex].classList.add("selected");
+    this.mentionList.childNodes[this.itemIndex].setAttribute('aria-selected', 'true');
     this.quill.root.setAttribute('aria-activedescendant', this.mentionList.childNodes[this.itemIndex].id);
 
     if (scrollItemInView) {
