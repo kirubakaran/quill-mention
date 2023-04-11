@@ -4,7 +4,8 @@ import {
   attachDataValues,
   getMentionCharIndex,
   hasValidChars,
-  hasValidMentionCharIndex
+  hasValidMentionCharIndex,
+  setOrGetElement,
 } from "./utils";
 import "./quill.mention.css";
 import "./blots/mention";
@@ -64,13 +65,18 @@ class Mention {
       mentionContainerClass: "ql-mention-list-container",
       mentionListClass: "ql-mention-list",
       spaceAfterInsert: true,
-      selectKeys: [Keys.ENTER]
+      selectKeys: [Keys.ENTER],
+      // Custom options
+      mentionParentElement: null,
+      relativeContainer: null,
     };
 
     Object.assign(this.options, options, {
       dataAttributes: Array.isArray(options.dataAttributes)
         ? this.options.dataAttributes.concat(options.dataAttributes)
-        : this.options.dataAttributes
+        : this.options.dataAttributes,
+      mentionParentElement: setOrGetElement(options.mentionParentElement),
+      relativeContainer: setOrGetElement(options.relativeContainer),
     });
 
     //create mention container
@@ -192,6 +198,8 @@ class Mention {
   showMentionList() {
     if (this.options.positioningStrategy === "fixed") {
       document.body.appendChild(this.mentionContainer);
+    } else if (this.options.mentionParentElement instanceof HTMLElement) {
+      this.options.mentionParentElement.appendChild(this.mentionContainer);
     } else {
       this.quill.container.appendChild(this.mentionContainer);
     }
@@ -461,7 +469,7 @@ class Mention {
   containerBottomIsNotVisible(topPos, containerPos) {
     const mentionContainerBottom =
       topPos + this.mentionContainer.offsetHeight + containerPos.top;
-    return mentionContainerBottom > window.pageYOffset + window.innerHeight;
+    return mentionContainerBottom > window.innerHeight;
   }
 
   containerRightIsNotVisible(leftPos, containerPos) {
@@ -500,7 +508,11 @@ class Mention {
     const mentionCharPos = this.quill.getBounds(this.mentionCharPos);
     const containerHeight = this.mentionContainer.offsetHeight;
 
-    let topPos = this.options.offsetTop;
+    // If relative container is not set, container offset will be ignored
+    const relativeContainerPos = this.options.relativeContainer?.getBoundingClientRect() || containerPos;
+    const containerOffset = containerPos.y - relativeContainerPos.y;
+
+    let topPos = this.options.offsetTop + containerOffset;
     let leftPos = this.options.offsetLeft;
 
     // handle horizontal positioning
@@ -522,14 +534,14 @@ class Mention {
     if (this.options.defaultMenuOrientation === "top") {
       // Attempt to align the mention container with the top of the quill editor
       if (this.options.fixMentionsToQuill) {
-        topPos = -1 * (containerHeight + this.options.offsetTop);
+        topPos = -1 * (containerHeight + this.options.offsetTop) + containerOffset;
       } else {
         topPos =
-          mentionCharPos.top - (containerHeight + this.options.offsetTop);
+          mentionCharPos.top - (containerHeight + this.options.offsetTop) + containerOffset;
       }
 
       // default to bottom if the top is not visible
-      if (topPos + containerPos.top <= 0) {
+      if (topPos + relativeContainerPos.top <= 0) {
         let overMentionCharPos = this.options.offsetTop;
 
         if (this.options.fixMentionsToQuill) {
@@ -538,7 +550,7 @@ class Mention {
           overMentionCharPos += mentionCharPos.bottom;
         }
 
-        topPos = overMentionCharPos;
+        topPos = overMentionCharPos + containerOffset;
       }
     } else {
       // Attempt to align the mention container with the bottom of the quill editor
@@ -549,14 +561,14 @@ class Mention {
       }
 
       // default to the top if the bottom is not visible
-      if (this.containerBottomIsNotVisible(topPos, containerPos)) {
+      if (this.containerBottomIsNotVisible(topPos, relativeContainerPos)) {
         let overMentionCharPos = this.options.offsetTop * -1;
 
         if (!this.options.fixMentionsToQuill) {
           overMentionCharPos += mentionCharPos.top;
         }
 
-        topPos = overMentionCharPos - containerHeight;
+        topPos = overMentionCharPos - containerHeight + containerOffset;
       }
     }
 
